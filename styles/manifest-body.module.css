@@ -1,0 +1,41 @@
+.section {
+  padding: 48px 0;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  display: inline-block;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+
+.heading {
+  margin: 10px 0 0;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  letter-spacing: -0.04em;
+}
+
+.panel {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: clamp(24px, 5vw, 44px);
+}
+
+.paragraph {
+  margin: 0;
+  font-size: clamp(1.1rem, 1.6vw, 1.32rem);
+  line-height: 1.9;
+  color: #ebeff5;
+}
+
+.paragraph + .paragraph {
+  margin-top: 22px;
+}
