@@ -24,6 +24,9 @@ export function ManifestHero() {
           <a className={styles.secondaryAction} href="#gri">
             Ver cambio de paradigma
           </a>
+          <a className={styles.secondaryAction} href="#gri-vs-grc">
+            GRI vs GRC
+          </a>
         </div>
       </div>
     </section>

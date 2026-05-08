@@ -54,6 +54,7 @@
   padding: 0 18px;
   border-radius: 999px;
   border: 1px solid var(--line);
+  cursor: pointer;
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
