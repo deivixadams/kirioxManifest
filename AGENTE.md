@@ -1,4 +1,5 @@
 Leer:
+
 Manifiesto Kiriox GRI
 Las organizaciones no fallan por falta de controles.
 Fallan porque no entienden cómo se comporta su propio sistema.

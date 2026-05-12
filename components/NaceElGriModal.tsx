@@ -91,8 +91,16 @@ function IconResume() {
   );
 }
 
-// Split into paragraphs to work around Chrome's ~15 s silent-freeze bug on long utterances
-const CHUNKS = FULL_TEXT.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+// Split into sentences: short enough to avoid Chrome desktop's ~15 s silent-freeze bug,
+// while the per-chunk timeout fallback covers Android's missing onend event.
+const CHUNKS = FULL_TEXT
+  .split(/\n{2,}/)
+  .flatMap((para) =>
+    para
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
 
 const RATES = [0.6, 0.8, 1.0, 1.2, 1.5, 1.8];
 const DEFAULT_RATE_INDEX = 2; // 1.0×
@@ -103,7 +111,7 @@ export function NaceElGriModal({ onClose }: Props) {
   const rateRef = useRef(RATES[DEFAULT_RATE_INDEX]);
   const chunkIndexRef = useRef(0);
   const pausedRef = useRef(false);
-  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const chunkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const block = (e: Event) => e.preventDefault();
@@ -142,6 +150,11 @@ export function NaceElGriModal({ onClose }: Props) {
   const speakChunk = (index: number) => {
     if (index >= CHUNKS.length || pausedRef.current) return;
 
+    if (chunkTimerRef.current) {
+      clearTimeout(chunkTimerRef.current);
+      chunkTimerRef.current = null;
+    }
+
     const utterance = new SpeechSynthesisUtterance(CHUNKS[index]);
     utterance.lang = "es-MX";
     utterance.rate = rateRef.current;
@@ -150,7 +163,11 @@ export function NaceElGriModal({ onClose }: Props) {
     const voice = pickLatinVoice();
     if (voice) utterance.voice = voice;
 
-    utterance.onend = () => {
+    const advance = () => {
+      if (chunkTimerRef.current) {
+        clearTimeout(chunkTimerRef.current);
+        chunkTimerRef.current = null;
+      }
       if (!pausedRef.current) {
         chunkIndexRef.current = index + 1;
         if (index + 1 < CHUNKS.length) {
@@ -161,7 +178,18 @@ export function NaceElGriModal({ onClose }: Props) {
         }
       }
     };
+
+    // Fallback timeout: Android sometimes never fires onend
+    const wordCount = CHUNKS[index].split(/\s+/).length;
+    const estimatedMs = Math.max((wordCount / 130) * 60000 / rateRef.current, 2000) + 5000;
+    chunkTimerRef.current = setTimeout(advance, estimatedMs);
+
+    utterance.onend = advance;
     utterance.onerror = (e) => {
+      if (chunkTimerRef.current) {
+        clearTimeout(chunkTimerRef.current);
+        chunkTimerRef.current = null;
+      }
       if (e.error === "interrupted") return;
       chunkIndexRef.current = index + 1;
       speakChunk(index + 1);
@@ -170,19 +198,10 @@ export function NaceElGriModal({ onClose }: Props) {
     window.speechSynthesis.speak(utterance);
   };
 
-  const startKeepAlive = () => {
-    keepAliveRef.current = setInterval(() => {
-      if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-        window.speechSynthesis.pause();
-        window.speechSynthesis.resume();
-      }
-    }, 10000);
-  };
-
   const stopAll = () => {
-    if (keepAliveRef.current) {
-      clearInterval(keepAliveRef.current);
-      keepAliveRef.current = null;
+    if (chunkTimerRef.current) {
+      clearTimeout(chunkTimerRef.current);
+      chunkTimerRef.current = null;
     }
     window.speechSynthesis.cancel();
   };
@@ -193,14 +212,18 @@ export function NaceElGriModal({ onClose }: Props) {
       pausedRef.current = false;
       stopAll();
       speakChunk(0);
-      startKeepAlive();
       setTtsState("speaking");
     };
 
     if (window.speechSynthesis.getVoices().length === 0) {
+      let started = false;
+      // Fallback: some Android devices never fire onvoiceschanged
+      const fallback = setTimeout(() => {
+        if (!started) { started = true; go(); }
+      }, 2000);
       window.speechSynthesis.onvoiceschanged = () => {
         window.speechSynthesis.onvoiceschanged = null;
-        go();
+        if (!started) { started = true; clearTimeout(fallback); go(); }
       };
     } else {
       go();
@@ -213,7 +236,7 @@ export function NaceElGriModal({ onClose }: Props) {
     setRateIndex(next);
     // if already speaking, restart current chunk with new rate
     if (ttsState === "speaking") {
-      window.speechSynthesis.cancel();
+      stopAll();
       speakChunk(chunkIndexRef.current);
     }
   };
