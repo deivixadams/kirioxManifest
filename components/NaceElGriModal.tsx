@@ -244,11 +244,7 @@ export function NaceElGriModal({ onClose }: Props) {
   const handleTts = () => {
     if (ttsState === "speaking") {
       pausedRef.current = true;
-      window.speechSynthesis.cancel();
-      if (keepAliveRef.current) {
-        clearInterval(keepAliveRef.current);
-        keepAliveRef.current = null;
-      }
+      stopAll();
       setTtsState("paused");
       return;
     }
@@ -256,7 +252,6 @@ export function NaceElGriModal({ onClose }: Props) {
     if (ttsState === "paused") {
       pausedRef.current = false;
       speakChunk(chunkIndexRef.current);
-      startKeepAlive();
       setTtsState("speaking");
       return;
     }
