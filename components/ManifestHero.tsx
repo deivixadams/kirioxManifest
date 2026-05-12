@@ -1,11 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "@/styles/manifest-hero.module.css";
 import { NaceElGriModal } from "@/components/NaceElGriModal";
 
 export function ManifestHero() {
   const [showModal, setShowModal] = useState(false);
+
+  useEffect(() => {
+    if (window.location.hash === "#nace-el-gri") setShowModal(true);
+  }, []);
 
   return (
     <>
